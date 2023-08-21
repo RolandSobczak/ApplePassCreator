@@ -1,35 +1,53 @@
 from pathlib import Path
 from json import dumps
+from hashlib import sha1
+from unittest.mock import patch, mock_open, call
 
 from src.apple_pass_creator.manifest_hash import calculate_sha1, calculate_file_hash, create_manifest
 
 
-TEST_FILE_PATH = Path("src/tests/test.txt")
-TEST_FILE1_PATH = Path("src/tests/test1.txt")
-TEST_FILE_VALID_SHA1_HASH = "3bb40f3ef694600497aa8588a21663444387bd39"
+def test_calculate_sha1(encoded_content: bytes):
+    valid_hash = sha1(encoded_content).hexdigest()
+
+    def file_reader():
+        has_returned = False
+        while not has_returned:
+            yield encoded_content
+            has_returned = True
+        yield None
+
+    file = file_reader()
+    hash_to_check = calculate_sha1(lambda: next(file))
+
+    assert hash_to_check == valid_hash
 
 
-def test_calculate_sha1():
-    with open(TEST_FILE_PATH, "rb") as f:
-        hash_to_check = calculate_sha1(f.read)
+def test_calculate_file_hash(encoded_content: bytes):
+    test_file_path = Path("/test/test.txt")
+    valid_hash = sha1(encoded_content).hexdigest()
 
-    assert hash_to_check == TEST_FILE_VALID_SHA1_HASH
+    with patch("builtins.open", mock_open(read_data=encoded_content)) as mock_file:
+        hash_to_check = calculate_file_hash(test_file_path)
 
-
-def test_calculate_file_hash():
-    hash_to_check = calculate_file_hash(TEST_FILE_PATH)
-
-    assert hash_to_check == TEST_FILE_VALID_SHA1_HASH
+    mock_file.assert_called_once_with(test_file_path, mode="rb")
+    assert hash_to_check == valid_hash
 
 
-def test_create_manifest():
-    test_files_paths = [TEST_FILE_PATH, TEST_FILE1_PATH]
-
-    result_json = create_manifest(paths=test_files_paths)
+def test_create_manifest(encoded_content: bytes):
+    test_files_paths = [Path("/test/test1.txt"), Path("/test/test2.txt")]
+    valid_hash = sha1(encoded_content).hexdigest()
     valid_result = dumps({
-        TEST_FILE_PATH.name: TEST_FILE_VALID_SHA1_HASH,
-        TEST_FILE1_PATH.name: TEST_FILE_VALID_SHA1_HASH,
+        test_files_paths[0].name: valid_hash,
+        test_files_paths[1].name: valid_hash,
     })
+    expected_calls = [
+        call(test_files_paths[0], mode="rb"),
+        call(test_files_paths[1], mode="rb")
+    ]
 
+    with patch("builtins.open", mock_open(read_data=encoded_content)) as mock_file:
+        result_json = create_manifest(paths=test_files_paths)
+
+    assert mock_file.call_count == 2
+    assert mock_file.call_args_list == expected_calls
     assert result_json == valid_result
-
