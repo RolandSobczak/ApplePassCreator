@@ -1,9 +1,13 @@
-from pathlib import Path
-from json import dumps
 from hashlib import sha1
-from unittest.mock import patch, mock_open, call
+from json import dumps
+from pathlib import Path
+from unittest.mock import call, mock_open, patch
 
-from src.apple_pass_creator.manifest_hash import calculate_sha1, calculate_file_hash, create_manifest
+from src.apple_pass_creator.manifest_hash import (
+    calculate_file_hash,
+    calculate_sha1,
+    create_manifest,
+)
 
 
 def test_calculate_sha1(encoded_content: bytes):
@@ -36,13 +40,15 @@ def test_calculate_file_hash(encoded_content: bytes):
 def test_create_manifest(encoded_content: bytes):
     test_files_paths = [Path("/test/test1.txt"), Path("/test/test2.txt")]
     valid_hash = sha1(encoded_content).hexdigest()
-    valid_result = dumps({
-        test_files_paths[0].name: valid_hash,
-        test_files_paths[1].name: valid_hash,
-    })
+    valid_result = dumps(
+        {
+            test_files_paths[0].name: valid_hash,
+            test_files_paths[1].name: valid_hash,
+        },
+    )
     expected_calls = [
         call(test_files_paths[0], mode="rb"),
-        call(test_files_paths[1], mode="rb")
+        call(test_files_paths[1], mode="rb"),
     ]
 
     with patch("builtins.open", mock_open(read_data=encoded_content)) as mock_file:
