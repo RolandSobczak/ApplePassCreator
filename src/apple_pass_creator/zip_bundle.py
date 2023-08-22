@@ -3,13 +3,36 @@ import zipfile
 from pathlib import Path
 
 
-def bundle_files(paths: list[Path]) -> bytes:
-    with io.BytesIO() as in_memory_zip:
-        with zipfile.ZipFile(in_memory_zip, "w") as zipf:
-            for file_path in paths:
-                with open(file_path, mode="rb") as f:
-                    zipf.writestr(file_path.name, f.read())
+class Bundle:
+    def __init__(self):
+        self._zip_bytes = io.BytesIO()
+        self._zipf = zipfile.ZipFile(self._zip_bytes, "w")
 
-        in_memory_zip.seek(0)
-        in_memory_zip_bytes = in_memory_zip.read()
-        return in_memory_zip_bytes
+    def add_file(self, filename: str, content: bytes) -> None:
+        self._zipf.writestr(filename, content)
+
+    @property
+    def zip(self) -> bytes:
+        self._zip_bytes.seek(0)
+        return self._zip_bytes.read()
+
+
+def bundle_files(paths: list[Path], other_files: dict[str, bytes]) -> bytes:
+    """This function helps with bundling files into zip files.
+    Accept both paths to files and files as bytes.
+
+    :param paths: List of paths to files which should be bundled
+    :type paths: list[Path]
+    :param other_files: Dict which contain filename: file_content_bytes pairs
+    :type other_files: dict[str, bytes]
+    :return: bundled zip file
+    :rtype: bytes
+    """
+    bundle = Bundle()
+    for file_path in paths:
+        with open(file_path, mode="rb") as f:
+            bundle.add_file(file_path.name, f.read())
+    for filename, content in other_files.items():
+        bundle.add_file(filename, content)
+
+    return bundle.zip
