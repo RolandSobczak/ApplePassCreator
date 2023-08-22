@@ -10,7 +10,7 @@ def render_pass_json(path: Path, **kwargs) -> str:
     :param path: path to pass.json file
     :type path: Path
     :param kwargs: variables for jinja2 template
-    :type kwargs: dict
+    :type kwargs: str
     :return: rendered file from provided path
     :rtype: str
     """
