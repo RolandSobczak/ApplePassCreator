@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import call, mock_open, patch
 
 from src.apple_pass_creator.manifest_hash import (
-    calculate_file_hash,
+    calculate_file_sha1,
     calculate_sha1,
     create_manifest,
 )
@@ -13,15 +13,7 @@ from src.apple_pass_creator.manifest_hash import (
 def test_calculate_sha1(encoded_content: bytes):
     valid_hash = sha1(encoded_content).hexdigest()
 
-    def file_reader():
-        has_returned = False
-        while not has_returned:
-            yield encoded_content
-            has_returned = True
-        yield None
-
-    file = file_reader()
-    hash_to_check = calculate_sha1(lambda: next(file))
+    hash_to_check = calculate_sha1(encoded_content)
 
     assert hash_to_check == valid_hash
 
@@ -31,7 +23,7 @@ def test_calculate_file_hash(encoded_content: bytes):
     valid_hash = sha1(encoded_content).hexdigest()
 
     with patch("builtins.open", mock_open(read_data=encoded_content)) as mock_file:
-        hash_to_check = calculate_file_hash(test_file_path)
+        hash_to_check = calculate_file_sha1(test_file_path)
 
     mock_file.assert_called_once_with(test_file_path, mode="rb")
     assert hash_to_check == valid_hash
