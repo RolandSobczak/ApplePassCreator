@@ -7,13 +7,14 @@ from typing import Dict, List, Optional
 class Bundle:
     def __init__(self):
         self._zip_bytes = io.BytesIO()
-        self._zipf = zipfile.ZipFile(self._zip_bytes, "w")
+        self._zipf = zipfile.ZipFile(self._zip_bytes, "a")
 
     def add_file(self, filename: str, content: bytes) -> None:
         self._zipf.writestr(filename, content)
 
     @property
     def zip(self) -> bytes:
+        self._zipf.close()
         self._zip_bytes.seek(0)
         return self._zip_bytes.read()
 
